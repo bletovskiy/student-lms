@@ -7,19 +7,22 @@ require_once('../config/database.php');
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fetch form data
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
     // Check if the user exists
     try {
         $sql = "SELECT user_id, password_hash, role FROM users WHERE username = :username";
         $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':username', $username);
+        $stmt->bindParam(':username', $username, PDO::PARAM_STR);
         $stmt->execute();
 
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
+            // Regenerate session ID to prevent session fixation attacks
+            session_regenerate_id();
+
             // Set session variables
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $username;
@@ -32,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Invalid username or password.";
         }
     } catch (PDOException $e) {
-        echo "Error: " . $e->getMessage();
+        error_log($e->getMessage()); // Log the error
+        $error = "An error occurred. Please try again later.";
     }
 }
 ?>

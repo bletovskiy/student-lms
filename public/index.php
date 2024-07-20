@@ -1,63 +1,124 @@
 <?php
-// Assuming this file is located in the 'public' directory
-require_once('../config/database.php'); // Adjust the path as necessary
+session_start();
 
-// Example data for courses and announcements (replace with actual data retrieval)
-$courses = [
-    ['id' => 1, 'title' => 'Introduction to Programming', 'description' => 'Learn the basics of programming languages.'],
-    ['id' => 2, 'title' => 'Web Development Fundamentals', 'description' => 'Master essential skills for web development.'],
-    ['id' => 3, 'title' => 'Database Design and Management', 'description' => 'Understand the principles of database design.']
-];
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
 
-$announcements = [
-    ['title' => 'Important Notice', 'content' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'],
-    ['title' => 'New Course Added', 'content' => 'Check out our latest course offerings!']
-];
+// Include the database connection file
+require 'database.php';
+
+// Fetch the current user's courses
+try {
+    $stmt = $pdo->prepare("SELECT c.course_id, c.course_name, c.description FROM courses c
+                           JOIN enrollments e ON c.course_id = e.course_id
+                           WHERE e.user_id = :user_id");
+    $stmt->bindParam(':user_id', $_SESSION['user_id']);
+    $stmt->execute();
+    $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    echo "Error: " . $e->getMessage();
+}
+
+// Fetch news
+try {
+    $stmt = $pdo->query("SELECT title, content, created_at FROM news ORDER BY created_at DESC LIMIT 5");
+    $news = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    echo "Error: " . $e->getMessage();
+}
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student LMS - Home</title>
-    <link rel="stylesheet" href="assets/styles.css"> <!-- Adjust path as needed -->
+    <title>Student LMS - Dashboard</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Example: Link to your CSS file -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+        }
+        .nav {
+            width: 20%;
+            background-color: #f0f0f0;
+            padding: 15px;
+        }
+        .content {
+            width: 80%;
+            padding: 15px;
+        }
+        .nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .nav ul li {
+            margin: 10px 0;
+        }
+        .nav ul li a {
+            text-decoration: none;
+            color: #333;
+        }
+        .nav ul li a:hover {
+            text-decoration: underline;
+        }
+        .course, .news-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>Welcome to Student LMS</h1>
+    <div class="container">
+        <div class="nav">
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="index.php">Home</a></li>
+                <li><a href="courses.php">Courses</a></li>
+                <li><a href="assignments.php">Assignments</a></li>
+                <li><a href="profile.php">Profile</a></li>
+                <li><a href="logout.php">Logout</a></li>
+            </ul>
         </div>
-    </header>
-    <main>
-        <section class="container">
-            <h2>Featured Courses</h2>
-            <div class="courses">
+        <div class="content">
+            <h2>Welcome, <?php echo $_SESSION['username']; ?></h2>
+            <p>Today's date: <?php echo date('Y-m-d'); ?></p>
+            
+            <h3>Your Courses</h3>
+            <?php if ($courses): ?>
                 <?php foreach ($courses as $course): ?>
-                <div class="course">
-                    <h3><?php echo $course['title']; ?></h3>
-                    <p><?php echo $course['description']; ?></p>
-                    <a href="courses.php?id=<?php echo $course['id']; ?>" class="btn">Explore Course</a>
-                </div>
+                    <div class="course">
+                        <h4><?php echo $course['course_name']; ?></h4>
+                        <p><?php echo $course['description']; ?></p>
+                    </div>
                 <?php endforeach; ?>
-            </div>
-        </section>
-        <section class="container">
-            <h2>Announcements</h2>
-            <div class="announcements">
-                <?php foreach ($announcements as $announcement): ?>
-                <div class="announcement">
-                    <h3><?php echo $announcement['title']; ?></h3>
-                    <p><?php echo $announcement['content']; ?></p>
-                </div>
+            <?php else: ?>
+                <p>You are not enrolled in any courses.</p>
+            <?php endif; ?>
+
+            <h3>Latest News</h3>
+            <?php if ($news): ?>
+                <?php foreach ($news as $news_item): ?>
+                    <div class="news-item">
+                        <h4><?php echo $news_item['title']; ?></h4>
+                        <p><?php echo $news_item['content']; ?></p>
+                        <p><small>Posted on: <?php echo $news_item['created_at']; ?></small></p>
+                    </div>
                 <?php endforeach; ?>
-            </div>
-        </section>
-    </main>
-    <footer>
-        <div class="container">
-            <p>&copy; <?php echo date('Y'); ?> Student LMS. All rights reserved.</p>
+            <?php else: ?>
+                <p>No news available.</p>
+            <?php endif; ?>
         </div>
-    </footer>
+    </div>
 </body>
 </html>
