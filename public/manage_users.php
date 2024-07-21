@@ -1,74 +1,99 @@
 <?php
 session_start();
+include '../config/database.php';
 
-// Check if the user is logged in and is an admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: login.php');
+    header("Location: login.php");
     exit;
 }
 
-// Include the database connection file
-require '../config/database.php';
-
-// Fetch all users
-try {
-    $stmt = $pdo->query("SELECT * FROM users");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    echo "Error: " . $e->getMessage();
-}
-
-// Handle user deletion
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
-    $user_id = $_POST['user_id'];
-    try {
-        $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = :user_id");
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
-        header('Location: manage_users.php');
-        exit;
-    } catch (PDOException $e) {
-        echo "Error: " . $e->getMessage();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['add'])) {
+        $username = $_POST['username'];
+        $email = $_POST['email'];
+        $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+        $role = $_POST['role'];
+        $query = $pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
+        $query->execute([$username, $email, $password, $role]);
+    } elseif (isset($_POST['update'])) {
+        $user_id = $_POST['user_id'];
+        $username = $_POST['username'];
+        $email = $_POST['email'];
+        $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+        $role = $_POST['role'];
+        $query = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, role = ? WHERE user_id = ?");
+        $query->execute([$username, $email, $password, $role, $user_id]);
+    } elseif (isset($_POST['delete'])) {
+        $user_id = $_POST['user_id'];
+        $query = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+        $query->execute([$user_id]);
     }
 }
 
+$query = $pdo->query("SELECT * FROM users");
+$users = $query->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Users</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Example: Link to your CSS file -->
+    <link rel="stylesheet" type="text/css" href="assets/adminstyles.css">
 </head>
 <body>
-    <h2>Manage Users</h2>
-    <table>
-        <tr>
-            <th>User ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Full Name</th>
-            <th>Role</th>
-            <th>Actions</th>
-        </tr>
-        <?php foreach ($users as $user): ?>
+    <div class="container">
+        <h2>Manage Users</h2>
+        <form method="POST">
+            <input type="hidden" name="user_id" id="user_id">
+            <label for="username">Username:</label>
+            <input type="text" name="username" id="username" required>
+            <label for="email">Email:</label>
+            <input type="email" name="email" id="email" required>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" required>
+            <label for="role">Role:</label>
+            <select name="role" id="role" required>
+                <option value="admin">Admin</option>
+                <option value="instructor">Instructor</option>
+                <option value="student">Student</option>
+            </select>
+            <button type="submit" name="add">Add User</button>
+            <button type="submit" name="update">Update User</button>
+        </form>
+        <table>
             <tr>
-                <td><?php echo $user['user_id']; ?></td>
-                <td><?php echo $user['username']; ?></td>
-                <td><?php echo $user['email']; ?></td>
-                <td><?php echo $user['full_name']; ?></td>
-                <td><?php echo $user['role']; ?></td>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+            <?php foreach ($users as $user): ?>
+            <tr>
+                <td><?php echo htmlspecialchars($user['user_id']); ?></td>
+                <td><?php echo htmlspecialchars($user['username']); ?></td>
+                <td><?php echo htmlspecialchars($user['email']); ?></td>
+                <td><?php echo htmlspecialchars($user['role']); ?></td>
                 <td>
-                    <form method="post" style="display: inline;">
-                        <input type="hidden" name="user_id" value="<?php echo $user['user_id']; ?>">
-                        <input type="submit" name="delete_user" value="Delete" onclick="return confirm('Are you sure you want to delete this user?')">
+                    <button onclick="editUser(<?php echo htmlspecialchars(json_encode($user)); ?>)">Edit</button>
+                    <form method="POST" style="display:inline;">
+                        <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($user['user_id']); ?>">
+                        <button type="submit" name="delete">Delete</button>
                     </form>
                 </td>
             </tr>
-        <?php endforeach; ?>
-    </table>
-    <p><a href="admin_panel.php">Back to Admin Panel</a></p>
+            <?php endforeach; ?>
+        </table>
+        <p><a href="index.php">Back to Home</a></p>
+    </div>
+    <script>
+        function editUser(user) {
+            document.getElementById('user_id').value = user.user_id;
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email;
+            document.getElementById('password').value = '';
+            document.getElementById('role').value = user.role;
+        }
+    </script>
 </body>
 </html>

@@ -1,71 +1,48 @@
 <?php
+// login.php
 session_start();
+include_once '../config/database.php'; // Adjust the path according to your file structure
 
-// Include the database connection file
-require_once('../config/database.php');
-
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Fetch form data
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    $username = $_POST['username'];
+    $password = $_POST['password'];
 
-    // Check if the user exists
-    try {
-        $sql = "SELECT user_id, password_hash, role FROM users WHERE username = :username";
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':username', $username, PDO::PARAM_STR);
-        $stmt->execute();
+    $stmt = $pdo->prepare('SELECT user_id, password_hash, role FROM users WHERE username = ?');
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
 
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($user && password_verify($password, $user['password_hash'])) {
-            // Regenerate session ID to prevent session fixation attacks
-            session_regenerate_id();
-
-            // Set session variables
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $username;
-            $_SESSION['role'] = $user['role'];
-
-            // Redirect to dashboard or homepage
-            header('Location: index.php');
-            exit;
-        } else {
-            $error = "Invalid username or password.";
-        }
-    } catch (PDOException $e) {
-        error_log($e->getMessage()); // Log the error
-        $error = "An error occurred. Please try again later.";
+    if ($user && password_verify($password, $user['password_hash'])) {
+        $_SESSION['user_id'] = $user['user_id'];
+        $_SESSION['role'] = $user['role'];
+        header('Location: index.php');
+        exit;
+    } else {
+        $error = 'Invalid username or password';
     }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Example: Link to your CSS file -->
+    <link rel="stylesheet" type="text/css" href="assets/styles.css">
 </head>
 <body>
-    <h2>Login</h2>
-    <?php
-    if (isset($error)) {
-        echo "<p style='color:red;'>$error</p>";
-    }
-    ?>
-    <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br><br>
-
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
-
-        <input type="submit" value="Login">
-    </form>
-    <br>
-    <a href="register.php">Register</a> <!-- Example: Link to registration page -->
+    <div class="container">
+        <h2>Login</h2>
+        <?php if (isset($error)): ?>
+            <p style="color: red;"><?php echo htmlspecialchars($error); ?></p>
+        <?php endif; ?>
+        <form method="post">
+            <label>Username:</label>
+            <input type="text" name="username" required>
+            <br>
+            <label>Password:</label>
+            <input type="password" name="password" required>
+            <br>
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </body>
 </html>

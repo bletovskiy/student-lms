@@ -1,34 +1,32 @@
 <?php
 session_start();
+include '../config/database.php';
 
-// Check if the user is logged in and is an admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: login.php');
+    header("Location: login.php");
     exit;
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Example: Link to your CSS file -->
+    <link rel="stylesheet" type="text/css" href="assets/adminstyles.css">
 </head>
 <body>
-    <h2>Welcome, <?php echo $_SESSION['username']; ?>!</h2>
-    <div>
-        <h3>Admin Panel</h3>
-        <ul>
-            <li><a href="manage_users.php">Manage Users</a></li>
-            <li><a href="manage_courses.php">Manage Courses</a></li>
-            <li><a href="manage_assignments.php">Manage Assignments</a></li>
-	    <li><a href="manage_enrollments.php">Manage Enrollments</a></li>
-	    <li><a href="manage_submissions.php">Manage Submissions</a></li>
-            <!-- Add more links for other admin functionalities -->
-        </ul>
-        <p><a href="logout.php">Logout</a></p>
+    <div class="container">
+        <h2>Admin Panel</h2>
+        <nav>
+            <a href="manage_users.php">Manage Users</a>
+            <a href="manage_courses.php">Manage Courses</a>
+            <a href="manage_enrollments.php">Manage Enrollments</a>
+            <a href="manage_assignments.php">Manage Assignments</a>
+            <a href="manage_submissions.php">Manage Submissions</a>
+            <a href="manage_news.php">Manage News</a>
+            <a href="index.php">Back to Home</a>
+        </nav>
+        <p>Welcome to the admin panel. Use the navigation above to manage various aspects of the platform.</p>
     </div>
 </body>
 </html>
